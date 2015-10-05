@@ -18,6 +18,51 @@ db_connect <- function(path=""){
   DBI::dbConnect( RSQLite::SQLite(), db_path( path ) )
 }
 
+
+#' function for ensuring that dishes table exists in db
+db_ensure_exists_dishes <- function(path=""){
+  db <- db_connect(path)
+  if( !("dishes" %in% DBI::dbListTables(db)) ){
+    createTable <-
+      'CREATE TABLE dishes (
+    "date_request" INTEGER,
+    "date_dish" TEXT,
+    "language" TEXT,
+    "types" TEXT,
+    "dish" TEXT,
+    "additives" TEXT,
+    "location" TEXT,
+    "http_status" INTEGER,
+    "content_length" INTEGER
+    )'
+    res <- DBI::dbSendQuery(db, createTable)
+  }
+  DBI::dbDisconnect(db)
+  return(res)
+}
+
+#' function for ensuring that tweets table exists in db
+db_ensure_exists_dishes <- function(path=""){
+  db <- db_connect(path)
+  if( !("dishes" %in% DBI::dbListTables(db)) ){
+    createTable <-
+      'CREATE TABLE tweets (
+    "date_dish" TEXT,
+    "language" TEXT,
+    "types" TEXT,
+    "dish" TEXT,
+    "location" TEXT,
+    "attempts" INTEGER,
+    "tweeted" INTEGER,
+    "date_attempts" INTEGER,
+    "tweet" TEXT
+    )'
+    res <- DBI::dbSendQuery(db, createTable)
+  }
+  DBI::dbDisconnect(db)
+  return(res)
+  }
+
 #' function for saving mensaplan to disk
 #' @param res the result of a call to mensaplan() or parse_mensaplan()
 mp_save <- function(res, path=""){
@@ -26,24 +71,10 @@ mp_save <- function(res, path=""){
       apply( x[, idvars],  1,  stringr::str_c, sep="", collapse="|"),
     " ",  ""  )
   }
+  # create dishes table if needed
+  db_ensure_exists_dishes(path)
   # connect
   db <- db_connect()
-  # create dishes table if needed
-  if( !("dishes" %in% DBI::dbListTables(db)) ){
-    createDishes <-
-      'CREATE TABLE dishes (
-          "date_request" INTEGER,
-          "date_dish" TEXT,
-          "language" TEXT,
-        	"types" TEXT,
-          "dish" TEXT,
-          "additives" TEXT,
-          "location" TEXT,
-          "http_status" INTEGER,
-          "content_length" INTEGER
-        )'
-    DBI::dbSendQuery(db, createDishes)
-  }
   # check for duplicates and sanatize if needed
   tmp <- DBI::dbReadTable(db, "dishes")
   idvars <- c("location", "language", "date_dish", "types", "http_status", "content_length")
@@ -65,6 +96,14 @@ mp_data <- function(path=""){
   db  <- db_connect(path)
   res <- DBI::dbReadTable(db, "dishes")
   DBI::dbDisconnect(db)
+  for(i in seq_along(res[1,])){
+    if( class(res[,i])=="character" ) {
+      Encoding(res[,i]) <- "UTF-8"
+    }
+  }
+  res$date_request <- as.POSIXct(res$date_request, origin="1970-01-01")
+  res$date_dish <- as.Date(res$date_dish)
+  class(res) <- c("mensaplan", class(res))
   return(res)
 }
 
