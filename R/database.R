@@ -42,16 +42,15 @@ db_ensure_exists_dishes <- function(path=""){
 }
 
 #' function for ensuring that tweets table exists in db
-db_ensure_exists_dishes <- function(path=""){
+db_ensure_exists_tweets <- function(path=""){
   db <- db_connect(path)
   if( !("dishes" %in% DBI::dbListTables(db)) ){
     createTable <-
       'CREATE TABLE tweets (
+    "location" TEXT,
     "date_dish" TEXT,
     "language" TEXT,
     "types" TEXT,
-    "dish" TEXT,
-    "location" TEXT,
     "attempts" INTEGER,
     "tweeted" INTEGER,
     "date_attempts" INTEGER,
@@ -74,7 +73,7 @@ mp_save <- function(res, path=""){
   # create dishes table if needed
   db_ensure_exists_dishes(path)
   # connect
-  db <- db_connect()
+  db <- db_connect(path)
   # check for duplicates and sanatize if needed
   tmp <- DBI::dbReadTable(db, "dishes")
   idvars <- c("location", "language", "date_dish", "types", "http_status", "content_length")
