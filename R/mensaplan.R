@@ -86,5 +86,52 @@ mensaplan <- function(
   date = format(Sys.Date(), "%Y-%m-%d"),
   loc  = "mensa_giessberg"
 ){
-  mp_parse(mp_scrape(lang, date, loc))
+  res <- mp_parse(mp_scrape(lang, date, loc))
+  mp_save(res)
+  class(res) <- c("mensaplan", class(res))
+  return(res)
 }
+
+#' customized print function for mensaplan data.frames
+#' @inheritParams print.data.frame
+print.mensaplan <- function (
+  x, ..., digits = NULL, quote = FALSE, right = TRUE, row.names = TRUE
+)
+{
+  n <- length(row.names(x))
+  if (length(x) == 0L) {
+    cat(sprintf(ngettext(n, "data frame with 0 columns and %d row",
+                         "data frame with 0 columns and %d rows", domain = "R-base"),
+                n), "\n", sep = "")
+  }
+  else if (n == 0L) {
+    print.default(names(x), quote = FALSE)
+    cat(gettext("<0 rows> (or 0-length row.names)\n"))
+  }
+  else {
+    m <- as.matrix(format.data.frame(x, digits = digits,
+                                     na.encode = FALSE))
+    if (!isTRUE(row.names))
+      dimnames(m)[[1L]] <- if (identical(row.names, FALSE))
+        rep.int("", n)
+    else row.names
+    for (i in seq_along(m[1,])) {
+      if ( max(nchar(m[,i])) > 20 ) {
+        m[,i] <- paste0(substring(m[,i], 1, 16), " ...")
+      }
+    }
+    print(m, ..., quote = quote, right = right)
+  }
+  invisible(x)
+}
+
+
+
+
+
+
+
+
+
+
+
