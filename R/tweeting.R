@@ -9,6 +9,7 @@ if(1==2){
   iffer <-
     mpdat$date_dish %in% date &
     !grepl("[kK]eine[ ]*Ausgabe", mpdat$dish) &
+    !grepl("keine Daten", mpdat$types) &
     mpdat$location %in% loc &
     mpdat$language %in% lang &
     mpdat$http_status == 200 &

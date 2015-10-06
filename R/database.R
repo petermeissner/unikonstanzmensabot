@@ -15,14 +15,14 @@ db_path <- function(path=""){
 #' function for connectiong to db used for storage
 #' @param path path to database
 db_connect <- function(path=""){
-  DBI::dbConnect( RSQLite::SQLite(), db_path( path ) )
+RSQLite::dbConnect( RSQLite::SQLite(), db_path( path ) )
 }
 
 
 #' function for ensuring that dishes table exists in db
 db_ensure_exists_dishes <- function(path=""){
   db <- db_connect(path)
-  if( !("dishes" %in% DBI::dbListTables(db)) ){
+  if( !("dishes" %in% RSQLite::dbListTables(db)) ){
     createTable <-
       'CREATE TABLE dishes (
     "date_request" INTEGER,
@@ -35,16 +35,18 @@ db_ensure_exists_dishes <- function(path=""){
     "http_status" INTEGER,
     "content_length" INTEGER
     )'
-    res <- DBI::dbSendQuery(db, createTable)
+    res <- RSQLite::dbSendQuery(db, createTable)
+  }else{
+    res <- TRUE
   }
-  DBI::dbDisconnect(db)
+  RSQLite::dbDisconnect(db)
   return(res)
 }
 
 #' function for ensuring that tweets table exists in db
 db_ensure_exists_tweets <- function(path=""){
   db <- db_connect(path)
-  if( !("dishes" %in% DBI::dbListTables(db)) ){
+  if( !("dishes" %in% RSQLite::dbListTables(db)) ){
     createTable <-
       'CREATE TABLE tweets (
     "location" TEXT,
@@ -56,9 +58,11 @@ db_ensure_exists_tweets <- function(path=""){
     "date_attempts" INTEGER,
     "tweet" TEXT
     )'
-    res <- DBI::dbSendQuery(db, createTable)
+    res <- RSQLite::dbSendQuery(db, createTable)
+  }else{
+    res <- TRUE
   }
-  DBI::dbDisconnect(db)
+  RSQLite::dbDisconnect(db)
   return(res)
   }
 
@@ -66,6 +70,7 @@ db_ensure_exists_tweets <- function(path=""){
 #' @param res the result of a call to mensaplan() or parse_mensaplan()
 mp_save <- function(res, path=""){
   make_ids <- function(x){
+    idvars <- c("location", "language", "date_dish", "types", "http_status", "content_length")
     stringr::str_replace_all(
       apply( x[, idvars],  1,  stringr::str_c, sep="", collapse="|"),
     " ",  ""  )
@@ -74,18 +79,33 @@ mp_save <- function(res, path=""){
   db_ensure_exists_dishes(path)
   # connect
   db <- db_connect(path)
-  # check for duplicates and sanatize if needed
-  tmp <- DBI::dbReadTable(db, "dishes")
-  idvars <- c("location", "language", "date_dish", "types", "http_status", "content_length")
-  tmp_ids <- make_ids(tmp)
-  if( any(duplicated(tmp_ids) )){
-    DBI::dbWriteTable(db, "dishes", tmp[!duplicated(tmp_ids), ], overwrite=TRUE)
+  # read in all data add new data and sanatize
+  tmp <- RSQLite::dbReadTable(db, "dishes")
+  old_length <- dim(tmp)[1]
+  tmp <- rbind(tmp, res)
+  tmp <- tmp[order(-tmp$content_length, -tmp$date_request),]
+  dupl_vars <- c("location", "language", "date_dish", "types")
+  duplicates <- tmp[duplicated(tmp[, dupl_vars]),]
+  drop <- NULL
+  keep <- NULL
+  for( i in seq_along(duplicates[,1])){
+    iffer <-
+      tmp$location == duplicates[i,"location"] &
+      tmp$language == duplicates[i,"language"] &
+      tmp$date_dish == duplicates[i,"date_dish"] &
+      tmp$types == duplicates[i,"types"]
+    keep <- c(keep, seq_along(tmp[,1])[iffer & tmp$http_status==200][1])
+    drop <- c(drop, seq_along(tmp[,1])[iffer & tmp$http_status==200])
   }
-  res_ids <- make_ids(res)
-  message("\nAdding ", sum(!(res_ids %in% tmp_ids)), " dishes to database.")
-  # write new data to db
-  dbres <- DBI::dbWriteTable(db, "dishes", res[!(res_ids %in% tmp_ids),], append=TRUE)
-  DBI::dbDisconnect(db)
+  drop <- drop[!(drop %in% keep)]
+  if(!is.null(drop)){
+    tmp <- tmp[-drop,]
+  }
+  new_length <- dim(tmp)[1]
+  # write data back to db
+  dbres <- RSQLite::dbWriteTable(db, "dishes", tmp, overwrite=TRUE)
+  RSQLite::dbDisconnect(db)
+  message("\nAdding ", ifelse(new_length > old_length, new_length-old_length, 0), " dishes to database.")
   # return
   return(dbres)
 }
@@ -93,8 +113,8 @@ mp_save <- function(res, path=""){
 #' function for reading the contents of the local mensaplan database
 mp_data <- function(path=""){
   db  <- db_connect(path)
-  res <- DBI::dbReadTable(db, "dishes")
-  DBI::dbDisconnect(db)
+  res <- RSQLite::dbReadTable(db, "dishes")
+  RSQLite::dbDisconnect(db)
   for(i in seq_along(res[1,])){
     if( class(res[,i])=="character" ) {
       Encoding(res[,i]) <- "UTF-8"
