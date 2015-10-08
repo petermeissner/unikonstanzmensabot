@@ -2,3 +2,4 @@
 .Rhistory
 .RData
 *.sqlite3
+.httr-oauth
