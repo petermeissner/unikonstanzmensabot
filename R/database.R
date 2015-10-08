@@ -20,7 +20,7 @@ RSQLite::dbConnect( RSQLite::SQLite(), db_path( path ) )
 
 
 #' function for ensuring that dishes table exists in db
-db_ensure_exists_dishes <- function(path=""){
+db_ensure_exists_disygeahes <- function(path=""){
   db <- db_connect(path)
   if( !("dishes" %in% RSQLite::dbListTables(db)) ){
     createTable <-
