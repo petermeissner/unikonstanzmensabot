@@ -34,3 +34,36 @@ gen_tweets <- function(date=Sys.Date(), lang="de", loc="mensa_giessberg", types=
   # return
   return(tweets)
 }
+
+
+twitter_token <- function(){
+  # get key and secret
+  key    = Sys.getenv("unikonstanzmensabot_twitter_key")
+  secret = Sys.getenv("unikonstanzmensabot_twitter_secret")
+  stopifnot(key!="", secret!="")
+
+  # make app
+  myapp <- oauth_app( "twitter", key, secret )
+  # get credentials
+  twitter_token <- oauth1.0_token(oauth_endpoints("twitter"), myapp)
+  # return
+  twitter_token
+}
+
+
+tweet <- function(tweet){
+  # tweet away
+  req <-
+    POST(
+      url  = "https://api.twitter.com/1.1/statuses/update.json",
+      body = list(
+        status = tweet,
+        lat = ,
+        lon =
+      ) ,
+      config(token = twitter_token()))
+  # return
+  return(content(req))
+}
+
+
