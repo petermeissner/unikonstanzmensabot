@@ -1,5 +1,5 @@
 .Rproj.user
 .Rhistory
 .RData
-*.sqlite3
+unikonstanzmensabot_data.sqlite3
 .httr-oauth

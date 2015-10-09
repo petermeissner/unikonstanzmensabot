@@ -43,9 +43,9 @@ twitter_token <- function(){
   stopifnot(key!="", secret!="")
 
   # make app
-  myapp <- oauth_app( "twitter", key, secret )
+  myapp <- httr::oauth_app( "twitter", key, secret )
   # get credentials
-  twitter_token <- oauth1.0_token(oauth_endpoints("twitter"), myapp)
+  twitter_token <- httr::oauth1.0_token(httr::oauth_endpoints("twitter"), myapp)
   # return
   twitter_token
 }
@@ -54,16 +54,17 @@ twitter_token <- function(){
 tweet <- function(tweet){
   # tweet away
   req <-
-    POST(
+    httr::POST(
       url  = "https://api.twitter.com/1.1/statuses/update.json",
       body = list(
         status = tweet,
-        lat = ,
-        lon =
+        lat = 47.690528,
+        long = 9.188986,
+        display_coordinates = "true"
       ) ,
-      config(token = twitter_token()))
+      httr::config(token = twitter_token()))
   # return
-  return(content(req))
+  return(httr::content(req))
 }
 
 
