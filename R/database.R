@@ -15,56 +15,26 @@ db_path <- function(path=""){
 #' function for connectiong to db used for storage
 #' @param path path to database
 db_connect <- function(path=""){
-RSQLite::dbConnect( RSQLite::SQLite(), db_path( path ) )
+  RSQLite::dbConnect( RSQLite::SQLite(), db_path( path ) )
 }
 
-
-#' function for ensuring that dishes table exists in db
-db_ensure_exists_dishes <- function(path=""){
+#' function for ensuring that a particular table exists in db
+db_ensure_table_exists <- function(path="", table=""){
+  # check if info on table exists
+  stopifnot( !is.null(storage$tables[[table]]) )
+  # connect to db
   db <- db_connect(path)
-  if( !("dishes" %in% RSQLite::dbListTables(db)) ){
-    createTable <-
-      'CREATE TABLE dishes (
-    "date_request" INTEGER,
-    "date_dish" TEXT,
-    "language" TEXT,
-    "types" TEXT,
-    "dish" TEXT,
-    "additives" TEXT,
-    "location" TEXT,
-    "http_status" INTEGER,
-    "content_length" INTEGER
-    )'
-    res <- RSQLite::dbSendQuery(db, createTable)
+  # create table if not existent
+  if( !(table %in% RSQLite::dbListTables(db)) ){
+    create_table <- storage$tables[[table]]
+    res <- RSQLite::dbGetQuery(db, create_table)
+    if (is.null(res) ) res <- TRUE
   }else{
     res <- TRUE
   }
   RSQLite::dbDisconnect(db)
   return(res)
 }
-
-#' function for ensuring that tweets table exists in db
-db_ensure_exists_tweets <- function(path=""){
-  db <- db_connect(path)
-  if( !("dishes" %in% RSQLite::dbListTables(db)) ){
-    createTable <-
-      'CREATE TABLE tweets (
-    "location" TEXT,
-    "date_dish" TEXT,
-    "language" TEXT,
-    "types" TEXT,
-    "attempts" INTEGER,
-    "tweeted" INTEGER,
-    "date_attempts" INTEGER,
-    "tweet" TEXT
-    )'
-    res <- RSQLite::dbSendQuery(db, createTable)
-  }else{
-    res <- TRUE
-  }
-  RSQLite::dbDisconnect(db)
-  return(res)
-  }
 
 #' function for saving mensaplan to disk
 #' @param res the result of a call to mensaplan() or parse_mensaplan()
@@ -76,7 +46,7 @@ mp_save <- function(res, path=""){
     " ",  ""  )
   }
   # create dishes table if needed
-  db_ensure_exists_dishes(path)
+  db_ensure_table_exists(path, "dishes")
   # connect
   db <- db_connect(path)
   # read in all data add new data and sanatize

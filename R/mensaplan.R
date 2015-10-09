@@ -3,7 +3,7 @@
 #' @param lang language of the mensa plan -- either "de" or "en"
 #' @param loc location identifier
 
-mp_scrape <-
+mp_post <-
   function(
     lang = c("de","en"),
     date = format(Sys.Date(), "%Y-%m-%d"),
@@ -24,6 +24,49 @@ mp_scrape <-
     return(post_results)
   }
 
+mp_request <- function(
+  lang = c("de","en"),
+  date = format(Sys.Date(), "%Y-%m-%d"),
+  loc= "mensa_giessberg")
+{
+  lang <- lang[1]
+  # create table in DB
+  db_ensure_table_exists("", "requests")
+  # check for old requests
+  db <- db_connect()
+  sql <- paste0(
+    "SELECT * FROM requests WHERE \n",
+    "lang = '",   lang,"' AND \ndate = '", date, "' AND \nloc = '",loc,"' AND \nstatus = '200'"
+  )
+  res <- RSQLite::dbGetQuery(db, sql)
+  if( dim(res)[1]==0 ) {
+    res  <- mp_post(lang, date, loc)
+    # extract content
+    cont <- httr::content(res, encoding="UTF-8", type="text")
+    # prepare data frame for db
+    df <-
+      data.frame(
+        req_date  = res$date,
+        status    = res$status_code,
+        res$request$fields,
+        httr_content_as_list(res$times, "t_"),
+        httr_content_as_list(res$cookies, "cookies_"),
+        length    = length(res$content),
+        content   = cont,
+        stringsAsFactors = FALSE
+      )
+    # write data to db
+    RSQLite::dbWriteTable(db, "requests", df, append = TRUE )
+  }else{
+    df <- res
+    df$req_date <- Sys.time()
+    df$status   <- 0
+    df[,7:21]   <- ""
+    RSQLite::dbWriteTable(db, "requests", df, append = TRUE )
+  }
+  RSQLite::dbDisconnect(db)
+  return(TRUE)
+}
 
 #' function parsing data retrieved
 #' @param post_results results from get_mesaplan()

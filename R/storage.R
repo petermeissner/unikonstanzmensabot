@@ -16,7 +16,7 @@ storage$tables$dishes <-
 
 storage$tables$requests <-
   'CREATE TABLE requests (
-        "post_date" TEXT,
+        "req_date" TEXT,
         "status" INTEGER,
         "func" TEXT,
         "loc" TEXT,
@@ -35,10 +35,11 @@ storage$tables$requests <-
         "cookies_expiration" TEXT,
         "cookies_name" TEXT,
         "cookies_value" TEXT,
+        "length" INTEGER,
         "content" TEXT
       )'
 
-storage$tables$requests <-
+storage$tables$tweets <-
   'CREATE TABLE tweets (
     "location" TEXT,
     "date_dish" TEXT,
