@@ -12,10 +12,16 @@ db_path <- function(path=""){
   }
 }
 
-#' function for connectiong to db used for storage
+#' function for connectiong to db
 #' @param path path to database
 db_connect <- function(path=""){
   RSQLite::dbConnect( RSQLite::SQLite(), db_path( path ) )
+}
+
+#' function for disconnecting from db
+#' @param db connection to db
+db_disconnect <- function(db){
+  RSQLite::dbDisconnect(db)
 }
 
 #' function for ensuring that a particular table exists in db
@@ -32,7 +38,7 @@ db_ensure_table_exists <- function(path="", table=""){
   }else{
     res <- TRUE
   }
-  RSQLite::dbDisconnect(db)
+  db_disconnect(db)
   return(res)
 }
 
@@ -74,7 +80,7 @@ mp_save <- function(res, path=""){
   new_length <- dim(tmp)[1]
   # write data back to db
   dbres <- RSQLite::dbWriteTable(db, "dishes", tmp, overwrite=TRUE)
-  RSQLite::dbDisconnect(db)
+  db_disconnect(db)
   message("\nAdding ", ifelse(new_length > old_length, new_length-old_length, 0), " dishes to database.")
   # return
   return(dbres)
@@ -84,7 +90,7 @@ mp_save <- function(res, path=""){
 mp_data <- function(path=""){
   db  <- db_connect(path)
   res <- RSQLite::dbReadTable(db, "dishes")
-  RSQLite::dbDisconnect(db)
+  db_disconnect(db)
   for(i in seq_along(res[1,])){
     if( class(res[,i])=="character" ) {
       Encoding(res[,i]) <- "UTF-8"
