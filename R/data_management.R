@@ -3,7 +3,7 @@
 #' @param lang language of the mensa plan -- either "de" or "en"
 #' @param loc location identifier
 
-mp_post <-
+mp_http_post <-
   function(
     lang = c("de","en"),
     date = format(Sys.Date(), "%Y-%m-%d"),
@@ -24,11 +24,21 @@ mp_post <-
     return(post_results)
   }
 
-mp_request <- function(
-  lang = c("de","en"),
-  date = format(Sys.Date(), "%Y-%m-%d"),
-  loc= "mensa_giessberg")
-{
+#' function for managing data retrieval
+#' downloads data (if necessary) and stores requests in database
+#' @param lang paramenter for HTTP POST determining the language of data
+#' @param date paramenter for HTTP POST determining the date of the dish
+#' @param loc  paramenter for HTTP POST determining the location for which to
+#'    retrieve data
+#' @param force by default the function will not download data for which it got
+#'    an valid (HTTP 200) response already - if set to true it will do it
+#'    anyways
+mp_data_retrieval <- function(
+  lang  = c("de","en"),
+  date  = format(Sys.Date(), "%Y-%m-%d"),
+  loc   = "mensa_giessberg",
+  force = FALSE
+){
   lang <- lang[1]
   # create table in DB
   db_ensure_table_exists("", "requests")
@@ -40,7 +50,7 @@ mp_request <- function(
   )
   res <- RSQLite::dbGetQuery(db, sql)
   if( dim(res)[1]==0 ) {
-    res  <- mp_post(lang, date, loc)
+    res  <- mp_http_post(lang, date, loc, force)
     # extract content
     cont <- httr::content(res, encoding="UTF-8", type="text")
     # prepare data frame for db
@@ -68,31 +78,50 @@ mp_request <- function(
   return(TRUE)
 }
 
+
+db_get_request_data <- function(date=Sys.Date(), status=200, loc="mensa_giessberg", lang="de"){
+  db <- db_connect()
+  sql_innize <- function(x){paste0("(", paste0("'",x ,"'", collapse = ", "), ")")}
+  sql <- paste0(
+    "SELECT * FROM requests WHERE ",
+    "     \n status IN ",  sql_innize(status),
+    "  AND\n date   IN ", sql_innize(date),
+    "  AND\n loc    IN ", sql_innize(loc),
+    "  AND\n lang   IN ",  sql_innize(lang[1])
+  )
+  res <- RSQLite::dbGetQuery(db, sql)
+  db_disconnect(db)
+  return(res)
+}
+
+#' function translating additive numbers into description
+#' @param x vector of additives
+get_additives <- function(x){
+  sort(x)
+  paste(storage$additives[storage$additives[,1] %in% x ,2], collapse=", ")
+}
+
+
 #' function parsing data retrieved
 #' @param post_results results from get_mesaplan()
-
-mp_parse <- function(post_results){
+request_to_dish <- function(res){
   # infor derives directly from http request
-  http_status    <- post_results$status_code
-  date_request   <- post_results$date
-  content        <- httr::content(post_results, as="text", encoding="UTF-8")
-  content_length <- nchar(content)
-  content        <- ifelse(content_length==0, "<body></body>", content)
-  date_dish      <- post_results$request$fields$date
-  language       <- post_results$request$fields$lang
-  location       <- post_results$request$fields$loc
+  date   <- res$date
+  lang   <- res$lang
+  loc    <- res$loc
+  html   <- xml2::read_html(res$content, encoding = "UTF-8")
   # dish types
-  tmp       <- rvest::html_text(rvest::html_nodes(xml2::read_html(content, encoding="UTF-8"), xpath = "//tr/td[1]"))
+  tmp       <- rvest::html_text(rvest::html_nodes(html, xpath = "//tr/td[1]"))
   if( length(tmp)>0 ){
-    types     <- stringr::str_replace_all(iconv(even(tmp), "UTF-8", "latin1"), "\n", "")
+    type     <- stringr::str_replace_all(iconv(even(tmp), "UTF-8", "latin1"), "\n", "")
   }else{
-    types <- NA
+    type <- NA
   }
   # dishes and additives
   tmp       <-
     rvest::html_text(
       rvest::html_nodes(
-        xml2::read_html(content, encoding = "UTF-8"),
+        html,
         xpath = "//tr/td[2]"
       )
     )
@@ -104,20 +133,40 @@ mp_parse <- function(post_results){
     additives <- NA
   }
   # results
-  res <-
-    data.frame(
-      date_request,
-      date_dish,
-      language,
-      types,
-      dish,
-      additives,
-      location,
-      http_status,
-      content_length
-  )
+  res <- data.frame( loc, lang, date, type, dish, additives)
+  add <- unlist(lapply(stringr::str_extract_all(res$dish, "\\d+"), get_additives))
+  res$dish <-
+    stringr::str_trim(
+      stringr::str_replace_all(
+        stringr::str_replace_all(
+          stringr::str_replace_all(res$dish, "\\(.*?\\)",""),
+          " ,", ","
+        ), "[ \t\n]+", " "
+      )
+    )
+  res$additives <-  paste( res$additives, add, sep=", " )
+  sql <-
+    paste0(
+      "INSERT OR REPLACE INTO dishes\n  (date, loc, lang, type, dish, additives) \n",
+      "  VALUES (\n",
+      paste0(
+      "    '", res$loc,  "', ",
+        "  '", res$lang, "', ",
+        "  '", res$date, "', ",
+        "  '", res$type, "', ",
+        "  '", stringr::str_replace_all(res$dish, "'", "''"), "', ",
+        " '", stringr::str_replace_all(res$additives, "'", "''"), "'  "
+        ),
+      "\n  )"
+    )
+  db <- db_connect()
+  db_ensure_table_exists(table="dishes")
+  for( i in seq_along(sql) ){
+    dbGetQuery(db, sql[i])
+  }
+  db_disconnect(db)
   # return
-  return(res)
+  return(TRUE)
 }
 
 #' wrapper function for get_mensaplan() and parse_mensaplan
