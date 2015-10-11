@@ -44,13 +44,9 @@ mp_data_retrieval <- function(
   db_ensure_table_exists("", "requests")
   # check for old requests
   db <- db_connect()
-  sql <- paste0(
-    "SELECT * FROM requests WHERE \n",
-    "lang = '",   lang,"' AND \ndate = '", date, "' AND \nloc = '",loc,"' AND \nstatus = '200'"
-  )
-  res <- RSQLite::dbGetQuery(db, sql)
-  if( dim(res)[1]==0 ) {
-    res  <- mp_http_post(lang, date, loc, force)
+  res <- db_get_request_data(date = date)
+  if( dim(res)[1]==0 | force ) {
+    res  <- mp_http_post(lang, date, loc)
     # extract content
     cont <- httr::content(res, encoding="UTF-8", type="text")
     # prepare data frame for db
@@ -88,6 +84,20 @@ db_get_request_data <- function(date=Sys.Date(), status=200, loc="mensa_giessber
     "  AND\n date   IN ", sql_innize(date),
     "  AND\n loc    IN ", sql_innize(loc),
     "  AND\n lang   IN ",  sql_innize(lang[1])
+  )
+  res <- RSQLite::dbGetQuery(db, sql)
+  db_disconnect(db)
+  return(res)
+}
+
+db_get_dish_data <- function(date=Sys.Date(), loc="mensa_giessberg", lang="de"){
+  db <- db_connect()
+  sql_innize <- function(x){paste0("(", paste0("'",x ,"'", collapse = ", "), ")")}
+  sql <- paste0(
+    "SELECT * FROM dishes WHERE ",
+    "     \n loc IN ",  sql_innize(loc),
+    "  AND\n lang   IN ", sql_innize(lang),
+    "  AND\n date    IN ", sql_innize(date)
   )
   res <- RSQLite::dbGetQuery(db, sql)
   db_disconnect(db)
@@ -147,7 +157,7 @@ request_to_dish <- function(res){
   res$additives <-  paste( res$additives, add, sep=", " )
   sql <-
     paste0(
-      "INSERT OR REPLACE INTO dishes\n  (date, loc, lang, type, dish, additives) \n",
+      "INSERT OR REPLACE INTO dishes\n  (loc, lang, date, type, dish, additives) \n",
       "  VALUES (\n",
       paste0(
       "    '", res$loc,  "', ",
@@ -162,7 +172,7 @@ request_to_dish <- function(res){
   db <- db_connect()
   db_ensure_table_exists(table="dishes")
   for( i in seq_along(sql) ){
-    dbGetQuery(db, sql[i])
+    RSQLite::dbGetQuery(db, sql[i])
   }
   db_disconnect(db)
   # return
@@ -174,14 +184,18 @@ request_to_dish <- function(res){
 #' @param lang language of the mensa plan -- either "de" or "en"
 #' @param loc location identifier
 mensaplan <- function(
-  lang = c("de","en"),
   date = format(Sys.Date(), "%Y-%m-%d"),
+  lang = "de",
   loc  = "mensa_giessberg"
 ){
-  res <- mp_parse(mp_scrape(lang, date, loc))
-  mp_save(res)
-  class(res) <- c("mensaplan", class(res))
-  return(res)
+  mp_data_retrieval()
+  dat <- db_get_request_data(lang=lang, date=date, loc=loc)
+  for( i in seq_along(dat[,1]) ){
+    request_to_dish(dat[i, ])
+  }
+  res <- db_get_dish_data(lang = lang, date = date, loc = loc)
+  class(res) <- c("mensaplan", "data.frame")
+  res
 }
 
 #' customized print function for mensaplan data.frames

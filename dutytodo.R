@@ -1,5 +1,5 @@
 #
 library(unikonstanzmensabot)
-mensaplan()
-tweets <- gen_tweets()
-lapply(tweets$tweet, tweet)
+mensaplan("2015-10-09")
+tweets <- gen_tweets("2015-10-09")
+tweet()

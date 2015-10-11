@@ -41,15 +41,13 @@ storage$tables$requests <-
 
 storage$tables$tweets <-
   'CREATE TABLE tweets (
-    "location" TEXT,
-    "date_dish" TEXT,
-    "language" TEXT,
-    "types" TEXT,
-    "attempts" INTEGER,
-    "tweeted" INTEGER,
-    "date_attempts" INTEGER,
-    "tweet" TEXT
-    )'
+    "loc" TEXT,
+    "lang" TEXT,
+    "date" TEXT,
+    "type" TEXT,
+    "id_str" INTEGER,
+    "tweet" INTEGER
+  )'
 
 storage$additives <-
 rbind(
