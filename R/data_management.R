@@ -41,7 +41,7 @@ mp_data_retrieval <- function(
 ){
   lang <- lang[1]
   # create table in DB
-  db_ensure_table_exists("", "requests")
+  db_ensure_table_exists("requests")
   # check for old requests
   db <- db_connect()
   res <- db_get_request_data(date = date)
@@ -75,34 +75,6 @@ mp_data_retrieval <- function(
 }
 
 
-db_get_request_data <- function(date=Sys.Date(), status=200, loc="mensa_giessberg", lang="de"){
-  db <- db_connect()
-  sql_innize <- function(x){paste0("(", paste0("'",x ,"'", collapse = ", "), ")")}
-  sql <- paste0(
-    "SELECT * FROM requests WHERE ",
-    "     \n status IN ",  sql_innize(status),
-    "  AND\n date   IN ", sql_innize(date),
-    "  AND\n loc    IN ", sql_innize(loc),
-    "  AND\n lang   IN ",  sql_innize(lang[1])
-  )
-  res <- RSQLite::dbGetQuery(db, sql)
-  db_disconnect(db)
-  return(res)
-}
-
-db_get_dish_data <- function(date=Sys.Date(), loc="mensa_giessberg", lang="de"){
-  db <- db_connect()
-  sql_innize <- function(x){paste0("(", paste0("'",x ,"'", collapse = ", "), ")")}
-  sql <- paste0(
-    "SELECT * FROM dishes WHERE ",
-    "     \n loc IN ",  sql_innize(loc),
-    "  AND\n lang   IN ", sql_innize(lang),
-    "  AND\n date    IN ", sql_innize(date)
-  )
-  res <- RSQLite::dbGetQuery(db, sql)
-  db_disconnect(db)
-  return(res)
-}
 
 #' function translating additive numbers into description
 #' @param x vector of additives
@@ -170,7 +142,7 @@ request_to_dish <- function(res){
       "\n  )"
     )
   db <- db_connect()
-  db_ensure_table_exists(table="dishes")
+  db_ensure_table_exists("dishes")
   for( i in seq_along(sql) ){
     RSQLite::dbGetQuery(db, sql[i])
   }
@@ -188,7 +160,7 @@ mensaplan <- function(
   lang = "de",
   loc  = "mensa_giessberg"
 ){
-  mp_data_retrieval()
+  mp_data_retrieval(date = date)
   dat <- db_get_request_data(lang=lang, date=date, loc=loc)
   for( i in seq_along(dat[,1]) ){
     request_to_dish(dat[i, ])

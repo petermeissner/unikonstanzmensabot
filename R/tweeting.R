@@ -55,19 +55,42 @@ twitter_token <- function(){
 
 
 tweet <- function(tweets){
+  stopifnot( dim(tweets)[1]<=1 )
+
+  # check if tweet was already made
+  dat <- db_get_tweet_data( date=tweets$date, loc=tweets$loc, lang=tweets$lang )
+  if ( any(tweets$type %in% dat$type) ){
+    warning("was already tweeted")
+    return(NULL)
+  }
+
   # tweet away
-  req <-
-    httr::POST(
-      url  = "https://api.twitter.com/1.1/statuses/update.json",
-      body = list(
-        status = tweets$tweet,
-        lat = 47.690528,
-        long = 9.188986,
-        display_coordinates = "true"
-      ) ,
-      httr::config(token = twitter_token()))
+    req <-
+      httr::POST(
+        url  = "https://api.twitter.com/1.1/statuses/update.json",
+        body = list(
+          status = tweets$tweet,
+          lat = "47.690528",
+          long = "9.188986",
+          display_coordinates = "true"
+        ) ,
+        httr::config(token = twitter_token())
+    )
+    if( httr::status_code(req) == 200 ){
+      cnt <- httr::content(req)
+      tweets$id_str     <- cnt$id_str
+      tweets$created_at <- cnt$created_at
+      tweets$text       <- cnt$text
+      tweet <- tweets[, c("loc", "lang", "date", "type", "id_str", "text", "created_at")]
+      db_ensure_table_exists("tweets")
+      RSQLite::dbWriteTable(db, "tweets", tweet, append=TRUE)
+    }else{
+      warning(
+        httr::content(twitter_fail)
+      )
+    }
   # return
-  return(httr::content(req))
+  return(req)
 }
 
 

@@ -44,8 +44,53 @@ db_ensure_table_exists <- function(table="", path=""){
 
 
 
+#' function for retrieving data from requests table in db
+db_get_request_data <- function(date=Sys.Date(), status=200, loc="mensa_giessberg", lang="de"){
+  db <- db_connect()
+  sql_innize <- function(x){paste0("(", paste0("'",x ,"'", collapse = ", "), ")")}
+  sql <- paste0(
+    "SELECT * FROM requests WHERE ",
+    "     \n status IN ",  sql_innize(status),
+    "  AND\n date   IN ", sql_innize(date),
+    "  AND\n loc    IN ", sql_innize(loc),
+    "  AND\n lang   IN ",  sql_innize(lang[1])
+  )
+  res <- RSQLite::dbGetQuery(db, sql)
+  db_disconnect(db)
+  return(res)
+}
 
 
+#' function for retrieving data from dishes table in db
+db_get_dish_data <- function(date=Sys.Date(), loc="mensa_giessberg", lang="de"){
+  db <- db_connect()
+  sql_innize <- function(x){paste0("(", paste0("'",x ,"'", collapse = ", "), ")")}
+  sql <- paste0(
+    "SELECT * FROM dishes WHERE ",
+    "     \n loc IN ",  sql_innize(loc),
+    "  AND\n lang   IN ", sql_innize(lang),
+    "  AND\n date    IN ", sql_innize(date)
+  )
+  res <- RSQLite::dbGetQuery(db, sql)
+  db_disconnect(db)
+  return(res)
+}
+
+
+#' function for retrieving data from tweets table in db
+db_get_tweet_data <- function(date=Sys.Date(), loc="mensa_giessberg", lang="de"){
+  db <- db_connect()
+  sql_innize <- function(x){paste0("(", paste0("'",x ,"'", collapse = ", "), ")")}
+  sql <- paste0(
+    "SELECT * FROM tweets WHERE ",
+    "     \n loc IN ",  sql_innize(loc),
+    "  AND\n lang   IN ", sql_innize(lang),
+    "  AND\n date    IN ", sql_innize(date)
+  )
+  res <- RSQLite::dbGetQuery(db, sql)
+  db_disconnect(db)
+  return(res)
+}
 
 
 

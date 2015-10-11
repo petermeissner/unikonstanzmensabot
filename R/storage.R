@@ -46,7 +46,8 @@ storage$tables$tweets <-
     "date" TEXT,
     "type" TEXT,
     "id_str" INTEGER,
-    "tweet" INTEGER
+    "text" TEXT,
+    "created_at"
   )'
 
 storage$additives <-
