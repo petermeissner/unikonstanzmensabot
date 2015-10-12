@@ -1,7 +1,7 @@
 Package: unikonstanzmensabot
 Type: Package
 Title: Tools to handle a simple Twitter canteen bot for Uni Konstanz Mensa
-Version: 0.1.0.90000
+Version: 0.2.0.90000
 Date: 2015-10-08
 Author: Peter Meissner [aut, cre]
 Maintainer: Peter Meissner <retep.meissner@gmail.com>
