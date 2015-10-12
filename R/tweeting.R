@@ -6,11 +6,13 @@
 #' @param regex possible regex for further subsetting
 #' @param invert shall regex be inverted?
 gen_tweets <- function(date=Sys.Date(), lang="de", loc="mensa_giessberg", type="all", regex="^.*", invert=FALSE){
+  # dev
+  # date=Sys.Date(); lang="de"; loc="mensa_giessberg"; type="all"; regex="^.*"; invert=FALSE
   # get data
   mpdat <- db_get_dish_data(lang=lang, loc=loc, date=date)
   # subset data
   iffer <-
-    mpdat$date %in% date &
+    mpdat$date %in% as.character(date) &
     !grepl("[kK]eine[ ]*Ausgabe", mpdat$dish) &
     !grepl("keine Daten", mpdat$type) &
     mpdat$loc %in% loc &
@@ -56,6 +58,7 @@ twitter_token <- function(){
 
 tweet <- function(tweets){
   stopifnot( dim(tweets)[1]<=1 )
+  db_ensure_table_exists("tweets")
 
   # check if tweet was already made
   dat <- db_get_tweet_data( date=tweets$date, loc=tweets$loc, lang=tweets$lang )
@@ -64,7 +67,7 @@ tweet <- function(tweets){
     return(NULL)
   }
 
-  # tweet away
+    # tweet away
     req <-
       httr::POST(
         url  = "https://api.twitter.com/1.1/statuses/update.json",
@@ -76,13 +79,14 @@ tweet <- function(tweets){
         ) ,
         httr::config(token = twitter_token())
     )
+    # write to db or return contents
     if( httr::status_code(req) == 200 ){
       cnt <- httr::content(req)
       tweets$id_str     <- cnt$id_str
       tweets$created_at <- cnt$created_at
       tweets$text       <- cnt$text
       tweet <- tweets[, c("loc", "lang", "date", "type", "id_str", "text", "created_at")]
-      db_ensure_table_exists("tweets")
+      db <- db_connect()
       RSQLite::dbWriteTable(db, "tweets", tweet, append=TRUE)
     }else{
       warning(
