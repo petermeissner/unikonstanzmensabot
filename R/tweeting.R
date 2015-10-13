@@ -30,6 +30,7 @@ gen_tweets <- function(date=Sys.Date(), lang="de", loc="mensa_giessberg", type="
       ),
       " (", mpdat$date, ")"
     )
+  tweets <- stringr::str_replace(tweets, ",,", ", ")
   tweets <- data.frame( tweet=ifelse(nchar(tweets) > 140, paste0(substring(tweets, 1, 136), " ..."), tweets ),
                         stringsAsFactors = FALSE)
   tweets$nchar <- nchar(tweets$tweet)
