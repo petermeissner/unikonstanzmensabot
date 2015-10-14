@@ -1,3 +1,4 @@
+#!/usr/bin/Rscript
 # doing duty to do
 
 library(unikonstanzmensabot)
@@ -16,6 +17,12 @@ for ( i in seq_len(dim(tweets)[1]) ) {
 }
 
 lapply(RES, class)
+
+# logging
+line <- paste(
+  Sys.time(), tweets$loc, tweets$lang, tweets$date, tweets$nchar, tweets$type,
+sep=" , ")
+write(line, file="dutytodo.log", append=TRUE)
 
 
 # bulk data retrieval
