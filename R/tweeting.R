@@ -91,7 +91,7 @@ tweet <- function(tweets){
       RSQLite::dbWriteTable(db, "tweets", tweet, append=TRUE)
     }else{
       warning(
-        httr::content(twitter_fail)
+        "something went wrong"
       )
     }
   # return
