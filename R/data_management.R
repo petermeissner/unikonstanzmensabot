@@ -126,6 +126,23 @@ request_to_dish <- function(res){
         ), "[ \t\n]+", " "
       )
     )
+  # divide pasta into two
+  tmp2 <- res[grepl("studente",res$type, ignore.case = TRUE),]
+  al_studente <- unlist(stringr::str_split(tmp2$dish, " oder "))
+  if( length(al_studente)==2 ){
+    res  <- res[!grepl("studente",res$type, ignore.case = TRUE),]
+    res_add <-
+      data.frame(
+        loc       = tmp2$loc,
+        lang      = tmp2$lang,
+        date      = tmp2$date,
+        type      = paste(tmp2$type,1:2),
+        dish      = al_studente,
+        additives = tmp2$additives
+      )
+    res <- rbind(res, res_add)
+    add <- c(add, add[length(add)])
+  }
   res$additives <-  paste( res$additives, add, sep=", " )
   sql <-
     paste0(

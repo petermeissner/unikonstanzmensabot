@@ -21,22 +21,38 @@ gen_tweets <- function(date=Sys.Date(), lang="de", loc="mensa_giessberg", type="
     !invert*grepl(regex, apply(mpdat, 1, paste, collapse=" "))
   mpdat <- mpdat[iffer,]
   # gen tweets
-  tweets <-
-    paste0(
+  tweets <- character(0)
+  tweet_dat <- mpdat[0, c("loc","date","lang","type")]
+  for ( i in seq_along(mpdat$dish) ){
+    if(stringr::str_length(mpdat$dish[i])>105){
+      tmp_dish <- unlist(stringr::str_split(stringr::str_wrap(mpdat$dish[i], 105),"\n"))
+      tmp_dish <- paste0(seq_along(tmp_dish), "/", length(tmp_dish) , " ", tmp_dish)
+    }else{
+      tmp_dish <- mpdat$dish[i]
+    }
+    tmp_tw <-
+      paste0(
       stringr::str_replace_all(
-        paste0(" [",mpdat$type,"]", " ", mpdat$dish),
+        paste0("[",mpdat$type[i],"]", " ", tmp_dish ),
         " *\\(.*?\\)",
         ""
       ),
-      " (", mpdat$date, ")"
+      " (", mpdat$date[i], ")",
+      " #unikonstanz"
     )
+    tweets <- c(tweets, tmp_tw)
+    #add data to tweetdat
+    for ( k in seq_along(tmp_tw) ){
+      tweet_dat <- rbind(tweet_dat, mpdat[i, c("loc","date","lang","type")])
+    }
+  }
   tweets <- stringr::str_replace(tweets, ",,", ", ")
   tweets <- data.frame( tweet=ifelse(nchar(tweets) > 140, paste0(substring(tweets, 1, 136), " ..."), tweets ),
                         stringsAsFactors = FALSE)
-  tweets$nchar <- nchar(tweets$tweet)
+  tweets$nchar <- stringr::str_length(tweets$tweet)
   tweets <- tweets[!grepl("\\[\\]", tweets$tweet), ]
   # combine with other data
-  tweets <- cbind(tweets, mpdat[, c("loc","date","lang","type")])
+  tweets <- cbind(tweets, tweet_dat)
   # return
   return(tweets)
 }
