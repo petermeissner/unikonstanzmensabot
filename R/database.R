@@ -76,6 +76,10 @@ db_get_dish_data <- function(date=Sys.Date(), loc="mensa_giessberg", lang="de"){
   return(res)
 }
 
+#' function for repairing encodings
+function(text){
+  grep()
+}
 
 #' function for retrieving data from tweets table in db
 db_get_tweet_data <- function(date=Sys.Date(), loc="mensa_giessberg", lang="de"){

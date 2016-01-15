@@ -62,14 +62,31 @@ twitter_token <- function(){
   # get key and secret
   key    = Sys.getenv("unikonstanzmensabot_twitter_key")
   secret = Sys.getenv("unikonstanzmensabot_twitter_secret")
+  token        = Sys.getenv("unikonstanzmensabot_twitter_token")
+  token_secret = Sys.getenv("unikonstanzmensabot_twitter_token_secret")
   stopifnot(key!="", secret!="")
 
   # make app
   myapp <- httr::oauth_app( "twitter", key, secret )
-  # get credentials
-  twitter_token <- httr::oauth1.0_token(httr::oauth_endpoints("twitter"), myapp)
-  # return
-  twitter_token
+
+  if( token=="" | token_secret==""){
+    # get credentials
+    twitter_token <- httr::oauth1.0_token(httr::oauth_endpoints("twitter"), myapp)
+    # return
+    return(twitter_token)
+  }else{
+    twitter_token <-
+      httr::Token1.0$new(
+        endpoint      = NULL,
+        params        = list(as_header = TRUE),
+        app           = myapp,
+        credentials   = list(
+          oauth_token = token,
+          oauth_token_secret = token_secret
+        )
+      )
+    return(twitter_token)
+  }
 }
 
 

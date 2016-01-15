@@ -10,7 +10,7 @@ even <- function(x) x[(seq_len(ceiling(length(x)/2)))*2-1]
 #' @param x named vector to make list of
 httr_content_as_list <- function(x, prefix=""){
   x <- as.list(x)
-  names(x) <- paste0(prefix, names(x))
+  if(length(names(x))>0) names(x) <- paste0(prefix, names(x))
   for( i in seq_along(x) ){
     if( length(x[[i]])==0 ){
       x[[i]] <- ""
