@@ -38,7 +38,7 @@ gen_tweets <- function(date=Sys.Date(), lang="de", loc="mensa_giessberg", type="
         ""
       ),
       " (", mpdat$date[i], ")",
-      " #unikonstanz"
+      ""
     )
     tweets <- c(tweets, tmp_tw)
     #add data to tweetdat

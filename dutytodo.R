@@ -2,6 +2,8 @@
 # doing duty to do
 
 library(unikonstanzmensabot)
+options("httr_oauth_cache"=FALSE)
+
 
 # download data
 mensaplan()
